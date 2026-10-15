@@ -69,7 +69,8 @@ public class OpenReacAmplIOFiles implements AmplParameters {
 
         //inputs
         this.constantQGenerators = new ConstantQGenerators(params.getConstantQGenerators());
-        this.variableShuntCompensators = new VariableShuntCompensators(params.getVariableShuntCompensators());
+        this.variableShuntCompensators = new VariableShuntCompensators(params.getVariableShuntCompensators(),
+                params.isDiscreteShuntCompensators(), network, reportNode);
         this.variableTwoWindingsTransformers = new VariableTwoWindingsTransformers(params.getVariableTwoWindingsTransformers());
         List<OpenReacAlgoParam> algoParams = new ArrayList<>(params.getAllAlgorithmParams());
         algoParams.add(new OpenReacAlgoParamImpl(SLACK_BUS_ID_PARAM, "\"" + Objects.requireNonNull(slackBusId) + "\""));
@@ -80,7 +81,8 @@ public class OpenReacAmplIOFiles implements AmplParameters {
 
         //outputs
         this.reactiveSlackOutput = new ReactiveSlackOutput();
-        this.networkModifications = new NetworkModifications(network, params.getShuntCompensatorActivationAlertThreshold());
+        this.networkModifications = new NetworkModifications(network, params.getShuntCompensatorActivationAlertThreshold(),
+                variableShuntCompensators.getDiscreteElementIds());
         this.voltageProfileOutput = new VoltageProfileOutput();
 
         this.debug = debug;

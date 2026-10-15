@@ -463,6 +463,14 @@ class OpenReacParametersTest {
     }
 
     @Test
+    void testIsDiscreteShuntCompensators() {
+        OpenReacParameters parameters = new OpenReacParameters();
+        assertFalse(parameters.isDiscreteShuntCompensators());
+        parameters.setDiscreteShuntCompensators(true);
+        assertTrue(parameters.isDiscreteShuntCompensators());
+    }
+
+    @Test
     void testAlgorithmParams() {
         OpenReacParameters parameters = new OpenReacParameters();
         parameters.setObjectiveDistance(40);

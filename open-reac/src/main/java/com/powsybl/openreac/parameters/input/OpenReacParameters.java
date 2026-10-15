@@ -159,6 +159,8 @@ public class OpenReacParameters {
 
     private ReferenceState referenceState = ReferenceState.NETWORK;
 
+    private boolean discreteShuntCompensators = false;
+
     // Shunt compensator alert threshold
     // (to help reporting the shunt compensators with a delta between optimized and discretized reactive value over this threshold in MVar)
 
@@ -181,7 +183,8 @@ public class OpenReacParameters {
 
     /**
      * A list of shunt compensators, which susceptance will be considered as variable by the optimizer.
-     * The optimizer computes a continuous value that is rounded when results are stored in {@link com.powsybl.openreac.parameters.output.OpenReacResult}.
+     * The optimizer computes a continuous value that is rounded when results are stored in {@link com.powsybl.openreac.parameters.output.OpenReacResult},
+     * unless their sections are rounded by the optimizer (see {@link #setDiscreteShuntCompensators}).
      */
     public OpenReacParameters addVariableShuntCompensators(List<String> shuntsIds) {
         this.variableShuntCompensators.addAll(shuntsIds);
@@ -594,6 +597,21 @@ public class OpenReacParameters {
 
     public OpenReacParameters setReferenceState(ReferenceState referenceState) {
         this.referenceState = Objects.requireNonNull(referenceState);
+        return this;
+    }
+
+    /**
+     * @return the boolean indicating if the sections of the variable shunt compensators are rounded by the optimizer,
+     *         from the continuous solution of a first ACOPF solving, then fixed in a second one (default false).
+     *         Only the shunt compensators with a linear model are concerned: the others are rounded to their closest
+     *         section afterward.
+     */
+    public boolean isDiscreteShuntCompensators() {
+        return discreteShuntCompensators;
+    }
+
+    public OpenReacParameters setDiscreteShuntCompensators(boolean discreteShuntCompensators) {
+        this.discreteShuntCompensators = discreteShuntCompensators;
         return this;
     }
 

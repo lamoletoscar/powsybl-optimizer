@@ -26,17 +26,13 @@ if final_status == "OK" then {
 
   let fileOut := "reactiveopf_results_shunts.csv";
   printf "#variant;num;bus;b(pu);Q(Mvar);section;\n" > (fileOut);
-  # Shunts which were already connected, with variable value
-  printf{(s,n) in SHUNT_VAR: (1,s,n) in SHUNT} "%i;%i;%i;%.3f;%.3f;%i;\n",
+  # Shunts with variable value, the disconnected ones being reconnected by reactiveopf
+  # Section: number of sections switched on for discrete shunts, 0 (unused) for continuous ones
+  printf{(s,n) in SHUNT_VAR} "%i;%i;%i;%.3f;%.3f;%i;\n",
     1,s,n,
     shunt_var[s,n],
     base100MVA * shunt_var[s,n] * V[n]^2,
-    0 #shunt_sections_count[1,s,n] # don't know what this is, so write 0
-    > (fileOut);
-  # Shunts which were not connected, and which have been reconnected by reactiveopf, with variable value
-  printf {(s,n) in SHUNT_VAR: (1,s,-1) in SHUNT} "%i;%i;%i;%.3f;%.3f;%i;\n",
-    1,s,n,shunt_var[s,n],base100MVA * shunt_var[s,n] * V[n]^2,
-    0 #shunt_sections_count[1,s,-1] # don't know what this is, so write 0
+    (if (s,n) in SHUNT_DISCRETE then shunt_sections_rounded[s,n] else 0)
     > (fileOut);
   close (fileOut);
 
@@ -368,6 +364,7 @@ printf "%s %i\n","nb_shunt_in_data_file",card(SHUNT) > (fileOut);
 printf "%s %i\n","nb_shunt_connectable_or_in_main_SC",card(SHUNTCC) > (fileOut);
 printf "%s %i\n","nb_shunt_with_fixed_value",card(SHUNT_FIX) > (fileOut);
 printf "%s %i\n","nb_shunt_with_variable_value",card(SHUNT_VAR) > (fileOut);
+printf "%s %i\n","nb_shunt_with_discrete_value",card(SHUNT_DISCRETE) > (fileOut);
 printf "%s %i\n","nb_transformers_with_variable_ratio",card(BRANCHCC_REGL_VAR) > (fileOut);
 printf "%s %i\n","nb_transformers_with_fixed_ratio",card(BRANCHCC_REGL_FIX) > (fileOut);
 printf "%s %i\n","nb_parallel_bundles",card(PARALLEL_BUNDLES_ALL) > (fileOut);

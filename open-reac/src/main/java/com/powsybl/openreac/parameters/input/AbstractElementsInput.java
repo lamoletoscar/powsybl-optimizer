@@ -13,6 +13,7 @@ import com.powsybl.openreac.parameters.AmplIOUtils;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,10 +29,13 @@ public abstract class AbstractElementsInput implements AmplInputFile {
 
     @Override
     public void write(BufferedWriter writer, StringToIntMapper<AmplSubset> stringToIntMapper) throws IOException {
-        writer.write("#num id\n");
+        List<String> header = new ArrayList<>(List.of("#num", "id"));
+        header.addAll(getExtraColumnNames());
+        writer.write(String.join(" ", header) + "\n");
         for (String elementID : elementIds) {
             int amplId = stringToIntMapper.getInt(getElementAmplSubset(), elementID);
-            String[] tokens = {Integer.toString(amplId), AmplIOUtils.addQuotes(elementID)};
+            List<String> tokens = new ArrayList<>(List.of(Integer.toString(amplId), AmplIOUtils.addQuotes(elementID)));
+            tokens.addAll(getExtraColumnValues(elementID));
             writer.write(String.join(" ", tokens));
             writer.newLine();
         }
@@ -41,4 +45,18 @@ public abstract class AbstractElementsInput implements AmplInputFile {
     }
 
     abstract AmplSubset getElementAmplSubset();
+
+    /**
+     * @return the names of the columns written after the num and the id of the elements, none by default.
+     */
+    List<String> getExtraColumnNames() {
+        return List.of();
+    }
+
+    /**
+     * @return the values of these columns for an element.
+     */
+    List<String> getExtraColumnValues(String elementId) {
+        return List.of();
+    }
 }

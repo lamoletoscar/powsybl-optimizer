@@ -37,9 +37,11 @@ check {(t,s) in SUBSTATIONS: s in BOUND_OVERRIDES}: substation_new_Vmin[s] < sub
 ###############################################################################
 # param_shunts.txt
 # All shunts are considered fixed to their value in ampl_network_shunts.txt (set and parameters based on SHUNT above)
-# Only shunts listed here will be changed by this reactive opf
+# Only shunts listed here will be changed by this reactive opf, rounded to a number of sections before the second
+# solving if param_shunt_discrete is 1 (linear shunts only)
 set PARAM_SHUNT  dimen 1 default {};
 param param_shunt_id{PARAM_SHUNT} symbolic;
+param param_shunt_discrete{PARAM_SHUNT} binary;
 check {(t,s,n) in SHUNT: s in PARAM_SHUNT}: shunt_id[t,s,n] == param_shunt_id[s];
 
 

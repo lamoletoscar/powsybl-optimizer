@@ -108,8 +108,10 @@ if (log_level_knitro <= 1) then {
 let nb_iter_total := nb_iter_total + problem_acopf_objective.numiters;
 let objective_value_first := problem_acopf_objective;
 
-# if option is activated and there is at least one transformer tap optimized, round all the taps and conduct another optimization
-if solve_result_num <= 103 and optimization_after_rounding == "true" and card(BRANCHCC_REGL_VAR) > 0 then {
+# conduct another optimization if there is at least one transformer tap optimized with the option of rounding them,
+# or at least one discrete shunt
+if solve_result_num <= 103
+   and ((optimization_after_rounding == "true" and card(BRANCHCC_REGL_VAR) > 0) or card(SHUNT_DISCRETE) > 0) then {
     include "acopf_2nd.run";
 }
 

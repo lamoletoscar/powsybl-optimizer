@@ -102,6 +102,7 @@ class OpenReacJsonModuleTest {
         parameters.setTwoWindingTransformerRatioVariableScalingFactor(0.005);
         parameters.setOptimizationAfterRounding(true);
         parameters.setParallelTransformersGrouping(false);
+        parameters.setDiscreteShuntCompensators(true);
 
         String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(parameters);
         ComparisonUtils.assertTxtEquals(Objects.requireNonNull(getClass().getResourceAsStream("/parametersThresholds.json")), json);
@@ -129,6 +130,7 @@ class OpenReacJsonModuleTest {
         assertEquals(0.005, parameters2.getTwoWindingTransformerRatioVariableScalingFactor());
         assertTrue(parameters2.isOptimizationAfterRounding());
         assertFalse(parameters2.isParallelTransformersGrouping());
+        assertTrue(parameters2.isDiscreteShuntCompensators());
     }
 
     @Test
@@ -181,6 +183,11 @@ class OpenReacJsonModuleTest {
         String json = "{\"version\" : \"1.4\", \"objective\" : \"MIN_GENERATION\"}";
         PowsyblException e = assertThrows(PowsyblException.class, () -> objectMapper.readValue(json, OpenReacParameters.class));
         assertTrue(e.getMessage().contains("objective is not valid for version 1.4"));
+
+        // The discrete shunt compensators field is accepted from version 1.5
+        String jsonDiscreteShunts = "{\"version\" : \"1.4\", \"discreteShuntCompensators\" : true}";
+        e = assertThrows(PowsyblException.class, () -> objectMapper.readValue(jsonDiscreteShunts, OpenReacParameters.class));
+        assertTrue(e.getMessage().contains("discreteShuntCompensators is not valid for version 1.4"));
     }
 
     @Test
@@ -194,9 +201,10 @@ class OpenReacJsonModuleTest {
                 Objects.requireNonNull(getClass().getResourceAsStream("/parametersV1dot0.json")),
                 OpenReacParameters.class);
 
-        // The 1.1, 1.2 and 1.3 fields must fall back to their defaults when reading a v1.0 file
+        // The 1.1, 1.2, 1.3 and 1.5 fields must fall back to their defaults when reading a v1.0 file
         assertTrue(parameters.isParallelTransformersGrouping());
         assertEquals(ReferenceState.NETWORK, parameters.getReferenceState());
+        assertFalse(parameters.isDiscreteShuntCompensators());
         assertEquals(10, parameters.getPenaltyInvestReaPos());
         assertEquals(10, parameters.getPenaltyInvestReaNeg());
         assertEquals(1.0, parameters.getPenaltyActivePower());

@@ -80,8 +80,8 @@ param: BRANCH: branch_3wt branch_subor branch_subex branch_R branch_X branch_Gor
 param: BOUND_OVERRIDES: substation_new_Vmin, substation_new_Vmax, substation_new_checkId := include ampl_network_substations_override.txt;
 
 # param_shunts.txt
-#"num" "id"
-param: PARAM_SHUNT: param_shunt_id := include param_shunts.txt;
+#"num" "id" "discrete"
+param: PARAM_SHUNT: param_shunt_id, param_shunt_discrete := include param_shunts.txt;
 
 # param_generators_reactive.txt
 #"num" "id"

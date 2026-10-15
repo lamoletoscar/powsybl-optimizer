@@ -9,6 +9,7 @@ package com.powsybl.openreac.parameters.output;
 
 import com.powsybl.ampl.converter.AmplConstants;
 import com.powsybl.ampl.converter.AmplSubset;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.util.StringToIntMapper;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.openreac.parameters.output.network.ShuntCompensatorNetworkOutput;
@@ -18,8 +19,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.util.Map;
+import java.util.Set;
 
+import static com.powsybl.openreac.network.ShuntNetworkFactory.createWithLinearModel;
 import static com.powsybl.openreac.network.ShuntNetworkFactory.createWithNonLinearModel;
 import static com.powsybl.openreac.network.ShuntNetworkFactory.createWithTwoShuntCompensators;
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,7 +38,7 @@ class ShuntCompensatorNetworkOutputTest {
     @Test
     void read() throws IOException {
         Network network = createWithNonLinearModel();
-        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0);
+        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0, Set.of());
         StringToIntMapper<AmplSubset> mapper = new StringToIntMapper<>(AmplSubset.class);
         mapper.newInt(AmplSubset.SHUNT, "SHUNT");
         for (int i = 0; i < 7; i++) {
@@ -54,7 +58,7 @@ class ShuntCompensatorNetworkOutputTest {
     @Test
     void readNullShuntCompensator() throws IOException {
         Network network = createWithNonLinearModel();
-        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0);
+        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0, Set.of());
         StringToIntMapper<AmplSubset> mapper = new StringToIntMapper<>(AmplSubset.class);
         mapper.newInt(AmplSubset.SHUNT, "wrongId");
         for (int i = 0; i < 7; i++) {
@@ -71,7 +75,7 @@ class ShuntCompensatorNetworkOutputTest {
     @Test
     void noShuntNumberInMapper() throws IOException {
         Network network = createWithNonLinearModel();
-        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0);
+        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0, Set.of());
         StringToIntMapper<AmplSubset> mapper = new StringToIntMapper<>(AmplSubset.class);
         try (InputStream input = getClass().getResourceAsStream("/mock_outputs/reactiveopf_results_shunts.csv");
              InputStreamReader in = new InputStreamReader(input);
@@ -83,7 +87,7 @@ class ShuntCompensatorNetworkOutputTest {
     @Test
     void noBusNumberInMapper() throws IOException {
         Network network = createWithNonLinearModel();
-        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0);
+        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0, Set.of());
         StringToIntMapper<AmplSubset> mapper = new StringToIntMapper<>(AmplSubset.class);
         mapper.newInt(AmplSubset.SHUNT, "SHUNT");
         try (InputStream input = getClass().getResourceAsStream("/mock_outputs/reactiveopf_results_shunts.csv");
@@ -148,9 +152,40 @@ class ShuntCompensatorNetworkOutputTest {
         assertEquals(120, output.getReactiveDeviationByShunt().get("SHUNT2"), 1e-6);
     }
 
+    /**
+     * SHUNT (linear, 25 sections of 1e-3 S) has its sections rounded by the optimizer: its section count is the one
+     * written by the optimizer (7, whereas b = 4.4e-3 S would be rounded to section 4), with the susceptance of that
+     * section and no deviation.
+     */
+    @Test
+    void discreteShuntSectionCountIsRead() throws IOException {
+        ShuntCompensatorNetworkOutput output = readDiscreteOutput("1;1;1;7.04;704.000;7;");
+        assertEquals(7, output.getModifications().get(0).getSectionCount());
+        assertEquals(7e-3, output.getContinuousSusceptanceByShunt().get("SHUNT"), 1e-12);
+        assertEquals(0, output.getReactiveDeviationByShunt().get("SHUNT"), 1e-9);
+    }
+
+    @Test
+    void discreteShuntSectionCountOutOfRange() {
+        PowsyblException e = assertThrows(PowsyblException.class, () -> readDiscreteOutput("1;1;1;7.04;704.000;26;"));
+        assertTrue(e.getMessage().contains("section count 26 out of range [0, 25] for shunt compensator SHUNT"));
+    }
+
+    private ShuntCompensatorNetworkOutput readDiscreteOutput(String line) throws IOException {
+        Network network = createWithLinearModel();
+        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0, Set.of("SHUNT"));
+        StringToIntMapper<AmplSubset> mapper = new StringToIntMapper<>(AmplSubset.class);
+        mapper.newInt(AmplSubset.SHUNT, "SHUNT");
+        mapper.newInt(AmplSubset.BUS, "b1");
+        try (BufferedReader reader = new BufferedReader(new StringReader("#variant;num;bus;b(pu);Q(Mvar);section;\n" + line))) {
+            output.read(reader, mapper);
+        }
+        return output;
+    }
+
     private ShuntCompensatorNetworkOutput readRoundingOutputs(String resourceName) throws IOException {
         Network network = createWithTwoShuntCompensators();
-        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0);
+        ShuntCompensatorNetworkOutput output = new ShuntCompensatorNetworkOutput(network, 0, Set.of());
         StringToIntMapper<AmplSubset> mapper = new StringToIntMapper<>(AmplSubset.class);
         mapper.newInt(AmplSubset.SHUNT, "SHUNT");
         mapper.newInt(AmplSubset.SHUNT, "SHUNT2");

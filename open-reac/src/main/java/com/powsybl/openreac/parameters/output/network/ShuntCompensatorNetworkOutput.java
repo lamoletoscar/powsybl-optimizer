@@ -8,6 +8,7 @@ package com.powsybl.openreac.parameters.output.network;
 
 import com.powsybl.ampl.converter.AmplConstants;
 import com.powsybl.ampl.converter.AmplSubset;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.util.StringToIntMapper;
 import com.powsybl.iidm.modification.ShuntCompensatorModification;
 import com.powsybl.iidm.network.Network;
@@ -28,11 +29,17 @@ public class ShuntCompensatorNetworkOutput extends AbstractNetworkOutput<ShuntCo
     private static final int ID_COLUMN_INDEX = 1;
     private static final int B_COLUMN_INDEX = 3;
     private static final int BUS_COLUMN_INDEX = 2;
+    private static final int SECTION_COLUMN_INDEX = 5;
     private final List<ShuntWithDeltaDiscreteOptimalOverThreshold> shuntWithDeltaDiscreteOptimalOverThresholds = new ArrayList<>();
     private final double shuntCompensatorActivationAlertThreshold;
     /**
+     * Shunts whose sections are rounded by the optimizer: their section count is read from the output file.
+     */
+    private final Set<String> discreteShuntIds;
+    /**
      * Continuous susceptance, in S, returned by the optimizer for each shunt compensator,
      * before it is discretized onto one of the sections the shunt actually provides.
+     * For a shunt whose sections are rounded by the optimizer, it is the susceptance of the section it retained.
      * Only covers the shunts present in the AMPL output and found in the network.
      */
     private final Map<String, Double> continuousSusceptanceByShunt = new HashMap<>();
@@ -54,9 +61,10 @@ public class ShuntCompensatorNetworkOutput extends AbstractNetworkOutput<ShuntCo
 
     public record ShuntWithDeltaDiscreteOptimalOverThreshold(String id, int maximumSectionCount, double discretizedReactiveValue, double optimalReactiveValue) { }
 
-    public ShuntCompensatorNetworkOutput(Network network, double shuntCompensatorActivationAlertThreshold) {
+    public ShuntCompensatorNetworkOutput(Network network, double shuntCompensatorActivationAlertThreshold, Set<String> discreteShuntIds) {
         super(network);
         this.shuntCompensatorActivationAlertThreshold = shuntCompensatorActivationAlertThreshold;
+        this.discreteShuntIds = Objects.requireNonNull(discreteShuntIds);
     }
 
     @Override
@@ -74,18 +82,35 @@ public class ShuntCompensatorNetworkOutput extends AbstractNetworkOutput<ShuntCo
         String id = stringToIntMapper.getId(AmplSubset.SHUNT, Integer.parseInt(tokens[ID_COLUMN_INDEX]));
         ShuntCompensator shuntCompensator = network.getShuntCompensator(id);
         if (!Objects.isNull(shuntCompensator)) {
-            double b = readDouble(tokens[B_COLUMN_INDEX]) * AmplConstants.SB / Math.pow(shuntCompensator.getTerminal().getVoltageLevel().getNominalV(), 2);
             String busId = stringToIntMapper.getId(AmplSubset.BUS, Integer.parseInt(tokens[BUS_COLUMN_INDEX]));
             Boolean reconnect = null;
             if (busId != null && busId.equals(shuntCompensator.getTerminal().getBusView().getConnectableBus().getId())) {
                 reconnect = true;
             }
-            int sectionCount = findSectionCount(shuntCompensator, b);
+            double b;
+            int sectionCount;
+            if (discreteShuntIds.contains(id)) {
+                // section retained by the optimizer: no discretization, hence a zero deviation
+                sectionCount = readSectionCount(shuntCompensator, tokens[SECTION_COLUMN_INDEX]);
+                b = shuntCompensator.getB(sectionCount);
+            } else {
+                b = readDouble(tokens[B_COLUMN_INDEX]) * AmplConstants.SB / Math.pow(shuntCompensator.getTerminal().getVoltageLevel().getNominalV(), 2);
+                sectionCount = findSectionCount(shuntCompensator, b);
+            }
             modifications.add(new ShuntCompensatorModification(id, reconnect, sectionCount));
             recordDiscretizationDeviation(shuntCompensator, b, sectionCount);
         } else {
             LOGGER.warn("Shunt compensator with id {} not found in the network", id);
         }
+    }
+
+    private int readSectionCount(ShuntCompensator sc, String token) {
+        int sectionCount = Integer.parseInt(token.trim());
+        if (sectionCount < 0 || sectionCount > sc.getMaximumSectionCount()) {
+            throw new PowsyblException("Error parsing shunts from " + getFileName() + ", section count " + sectionCount
+                    + " out of range [0, " + sc.getMaximumSectionCount() + "] for shunt compensator " + sc.getId() + ".");
+        }
+        return sectionCount;
     }
 
     /**

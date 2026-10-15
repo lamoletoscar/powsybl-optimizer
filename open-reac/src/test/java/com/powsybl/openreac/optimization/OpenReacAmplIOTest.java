@@ -45,6 +45,7 @@ class OpenReacAmplIOTest extends AbstractOpenReacRunnerTest {
                 .setPenaltyActivePower(0.01)
                 .setPenaltyVoltageTargetRatio(1.0)
                 .setReactiveSlackBusesMode(ReactiveSlackBusesMode.CONFIGURED)
+                .setDiscreteShuntCompensators(true)
                 .addVariableTwoWindingsTransformers(network.getTwoWindingsTransformerStream()
                         .limit(1)
                         .map(TwoWindingsTransformer::getId)

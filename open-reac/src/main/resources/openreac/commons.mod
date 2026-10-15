@@ -198,11 +198,53 @@ set SHUNT_VAR := setof {(1,s,n) in SHUNT :
   and (s,n) in SHUNTCC # Remember n might be -1 if shunt_possiblebus[1,s,n] is in BUSCC
   and abs(shunt_valmin[1,s,n])+abs(shunt_valmax[1,s,n]) >= Pnull / base100MVA # Useless to allow change if values are too small
   } (s,shunt_possiblebus[1,s,n]);
+# Variable shunts rounded to a number of sections before the second solving. These are linear shunts, exported with
+# {minB, maxB} = {0, N * b} (b susceptance of a section, N maximum number of sections) and N - 1 intermediate points
+set SHUNT_DISCRETE := {(s,n) in SHUNT_VAR: param_shunt_discrete[s] == 1};
+param shunt_sections_max{(s,n) in SHUNT_DISCRETE} integer := max{(1,s,k) in SHUNT} shunt_interPoints[1,s,k] + 1;
+param shunt_section_b{(s,n) in SHUNT_DISCRETE} :=
+  max{(1,s,k) in SHUNT} (shunt_valmin[1,s,k] + shunt_valmax[1,s,k]) / shunt_sections_max[s,n];
+check {(s,n) in SHUNT_DISCRETE, (1,s,k) in SHUNT}: shunt_valmin[1,s,k] == 0 or shunt_valmax[1,s,k] == 0;
 # Shunts with fixed values
 set SHUNT_FIX := setof {(1,s,n) in SHUNT: s not in PARAM_SHUNT and n in BUSCC} (s,n);
 # If a shunt is not connected (n=-1) and it is not in PARAM_SHUNT, then it will not be
 # reconnected by reactive opf. These shunts are not in SHUNT_VAR nor in SHUNT_FIX; they
 # are simply ignored
+
+#
+# Rounding of the discrete shunts before the second solving (see acopf_2nd.run)
+#
+# On each bus, the combinations of sections of the discrete shunts are enumerated, and the one retained is, in this
+# order, the closest to the continuous susceptance of the bus (given by the numbers of sections n* of the first
+# solving), the closest to these n*, and the smallest. A bus with more than shunt_rounding_count_max combinations gets
+# the closest sections instead.
+param shunt_sections_continuous{SHUNT_DISCRETE}; # n* in [0, N]
+set SHUNT_DISCRETE_BUS := setof{(s,n) in SHUNT_DISCRETE} n;
+param shunt_rounding_count{n in SHUNT_DISCRETE_BUS} := prod{(s,n) in SHUNT_DISCRETE} (shunt_sections_max[s,n] + 1);
+param shunt_rounding_count_max := 10000;
+set SHUNT_ROUNDING_BUS := {n in SHUNT_DISCRETE_BUS: shunt_rounding_count[n] <= shunt_rounding_count_max};
+# Combination c of a bus: number written in mixed radix over its shunts sorted by number, whose digit of weight
+# shunt_rounding_base[s,n] is the number of sections of the shunt s
+param shunt_rounding_base{(s,n) in SHUNT_DISCRETE} := prod{(t,n) in SHUNT_DISCRETE: t < s} (shunt_sections_max[t,n] + 1);
+param shunt_rounding_sections{n in SHUNT_ROUNDING_BUS, c in 0..shunt_rounding_count[n]-1, (s,n) in SHUNT_DISCRETE} :=
+  (c div shunt_rounding_base[s,n]) mod (shunt_sections_max[s,n] + 1);
+param shunt_rounding_deviation{n in SHUNT_ROUNDING_BUS, c in 0..shunt_rounding_count[n]-1} :=
+  abs(sum{(s,n) in SHUNT_DISCRETE}
+    shunt_section_b[s,n] * (shunt_rounding_sections[n,c,s] - shunt_sections_continuous[s,n]));
+param shunt_rounding_distance{n in SHUNT_ROUNDING_BUS, c in 0..shunt_rounding_count[n]-1} :=
+  sum{(s,n) in SHUNT_DISCRETE} abs(shunt_rounding_sections[n,c,s] - shunt_sections_continuous[s,n]);
+param shunt_rounding_gap{n in SHUNT_ROUNDING_BUS} :=
+  min{c in 0..shunt_rounding_count[n]-1} shunt_rounding_deviation[n,c];
+param shunt_rounding_closest{n in SHUNT_ROUNDING_BUS} :=
+  min{c in 0..shunt_rounding_count[n]-1: shunt_rounding_deviation[n,c] <= shunt_rounding_gap[n] + 1e-9}
+    shunt_rounding_distance[n,c];
+param shunt_rounding_choice{n in SHUNT_ROUNDING_BUS} :=
+  min{c in 0..shunt_rounding_count[n]-1: shunt_rounding_deviation[n,c] <= shunt_rounding_gap[n] + 1e-9
+    and shunt_rounding_distance[n,c] <= shunt_rounding_closest[n] + 1e-9} c;
+param shunt_sections_rounded{(s,n) in SHUNT_DISCRETE} integer :=
+  if n in SHUNT_ROUNDING_BUS
+  then shunt_rounding_sections[n,shunt_rounding_choice[n],s]
+  else round(shunt_sections_continuous[s,n]);
 
 #
 # Control parameters for reactive power of units

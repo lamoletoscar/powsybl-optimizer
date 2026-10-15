@@ -33,6 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 
 import static com.powsybl.openreac.network.ShuntNetworkFactory.createWithLinearModel;
+import static com.powsybl.openreac.parameters.input.ReportTestHelper.hasReportWithKey;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -141,6 +142,26 @@ class OpenReacOptimizationAndLoadFlowTest extends AbstractOpenReacRunnerTest {
 
         assertTrue(shunt.getTerminal().isConnected()); // shunt has been reconnected
         assertEquals(420.8, shunt.getTargetV()); // targetV has been updated
+    }
+
+    /**
+     * With discrete sections, the section count written by the optimizer (0) is applied instead of the section closest
+     * to the susceptance (1, see testShunt), hence no discretization deviation.
+     */
+    @Test
+    void testShuntWithDiscreteSections() throws IOException {
+        Network network = createWithLinearModel();
+        ShuntCompensator shunt = network.getShuntCompensator("SHUNT");
+
+        OpenReacParameters parameters = new OpenReacParameters();
+        parameters.setDiscreteShuntCompensators(true);
+        parameters.addVariableShuntCompensators(List.of(shunt.getId()));
+        ReportNode reportNode = ReportNode.newRootReportNode().withAllResourceBundlesFromClasspath().withMessageTemplate("optimizer.openreac.openReac").build();
+        testAllModifAndLoadFlow(network, "optimization/loadflow/openreac-output-shunt", parameters, reportNode);
+
+        assertFalse(hasReportWithKey(reportNode, "optimizer.openreac.shuntCompensatorDeltaOverThresholdCount"));
+        assertTrue(shunt.getTerminal().isConnected()); // shunt has been reconnected
+        assertEquals(0, shunt.getSectionCount());
     }
 
     @Test

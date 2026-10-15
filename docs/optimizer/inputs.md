@@ -63,11 +63,11 @@ This is done using the following files:
 | File                                  | Description                                                                                                                                             | Default behavior of modified values                                                                         |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | `param_transformers.txt`              | Ratio tap changers with a variable transformation ratio (real variable). Note that ratio tap changers on branches with one side open are not optimized. | Transformation ratios are fixed                                                                             |
-| `param_shunt.txt`                     | Shunts with a continuous variable susceptance and which can be modified and/or connected (only if possible bus is defined in `ampl_network_shunts.txt`) | Shunt susceptances are fixed                                                                                |
+| `param_shunts.txt`                    | Shunts with a variable susceptance and which can be modified and/or connected (only if possible bus is defined in `ampl_network_shunts.txt`), with the shunts whose sections are rounded by the optimization flagged by $1$ in the third column (see [Discrete shunt sections](acOptimalPowerflow.md#discrete-shunt-sections)) | Shunt susceptances are fixed                                                                                |
 | `param_generators_reactive.txt`       | Generators with a constant reactive power production. If this value is not consistent (> PQmax), the reactive power production stays variable           | Coherent reactive power productions (see [P/Q unit domain](preprocessing.md#pq-unit-domain)) are variable   |
 | `param_buses_with_reactive_slack.txt` | Buses with attached reactive slacks if configurable parameter buses_with_reactive_slacks = "CONFIGURED"                                                 | Only buses with no reactive power production have reactive slacks attached                                  |    
 
-All of these files share the same format: 2 columns #"num" "id".
+All of these files share the same format: 2 columns #"num" "id", except `param_shunts.txt` which has a third column "discrete".
 
 Once again, the user can directly execute the AMPL code without passing these parameters files as input. 
 If so, empty files will be created during execution.

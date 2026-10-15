@@ -139,6 +139,15 @@ public final class Reports {
                 .add();
     }
 
+    public static void reportNonLinearShuntCompensatorsKeptContinuous(ReportNode reportNode, List<String> shuntCompensatorIds) {
+        reportNode.newReportNode()
+                .withMessageTemplate("optimizer.openreac.nonLinearShuntCompensatorsKeptContinuous")
+                .withSeverity(TypedValue.WARN_SEVERITY)
+                .withUntypedValue(SIZE, shuntCompensatorIds.size())
+                .withUntypedValue("shuntCompensatorIds", String.join(", ", shuntCompensatorIds))
+                .add();
+    }
+
     public static void reportVariableTwoWindingsTransformersSize(ReportNode reportNode, int variableTwoWindingsTransformersSize) {
         reportNode.newReportNode()
             .withMessageTemplate("optimizer.openreac.variableTwoWindingsTransformersSize")

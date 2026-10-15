@@ -175,6 +175,9 @@ public class OpenReacParametersDeserializer extends StdDeserializer<OpenReacPara
             )),
             entry("referenceState", safeRead((parser, parameters) ->
                 parameters.setReferenceState(ReferenceState.valueOf(parser.getText()))
+            )),
+            entry("discreteShuntCompensators", safeRead((parser, parameters) ->
+                parameters.setDiscreteShuntCompensators(parser.getValueAsBoolean())
             ))
     );
 
@@ -212,6 +215,8 @@ public class OpenReacParametersDeserializer extends StdDeserializer<OpenReacPara
                     JsonUtil.assertGreaterOrEqualThanReferenceVersion(CLASS_NAME, fieldName, version, "1.3");
                 case "objective" ->
                     JsonUtil.assertLessThanReferenceVersion(CLASS_NAME, fieldName, version, "1.4");
+                case "discreteShuntCompensators" ->
+                    JsonUtil.assertGreaterOrEqualThanReferenceVersion(CLASS_NAME, fieldName, version, "1.5");
                 default -> { /* no version gate */ }
             }
 

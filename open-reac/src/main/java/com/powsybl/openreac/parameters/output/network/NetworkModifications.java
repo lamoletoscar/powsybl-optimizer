@@ -17,6 +17,7 @@ import com.powsybl.iidm.network.Network;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Data class to store all outputs resulting of NetworkModification.
@@ -33,10 +34,13 @@ public class NetworkModifications {
     private final SvcNetworkOutput svcOutput;
     private final TapPositionNetworkOutput tapPositionOutput;
 
-    public NetworkModifications(Network network, double shuntCompensatorActivationAlertThreshold) {
+    /**
+     * @param discreteShuntIds ids of the shunts whose sections are rounded by the optimizer.
+     */
+    public NetworkModifications(Network network, double shuntCompensatorActivationAlertThreshold, Set<String> discreteShuntIds) {
         generatorNetworkOutput = new GeneratorNetworkOutput(network);
         batteryOutput = new BatteryNetworkOutput(network);
-        shuntsOutput = new ShuntCompensatorNetworkOutput(network, shuntCompensatorActivationAlertThreshold);
+        shuntsOutput = new ShuntCompensatorNetworkOutput(network, shuntCompensatorActivationAlertThreshold, discreteShuntIds);
         vscOutput = new VscNetworkOutput(network);
         svcOutput = new SvcNetworkOutput(network);
         tapPositionOutput = new TapPositionNetworkOutput(network);
