@@ -133,6 +133,11 @@ The discrete shunts of a bus are rounded together: among all the combinations of
 and, in case of equality, the sum over its shunts of the deviations of their numbers of sections from $n_s^*$.
 These combinations are enumerated; a bus with more than $10000$ of them gets the closest sections instead.
 
+If the second solving is successful, this rounding is then corrected by moves of one section, within at most $2$ more solvings.
+A move is estimated by the cost of the reactive slack of its bus that it relieves (see [Constraints](#constraints)), and is a candidate if this estimate is above $10$.
+A solving tries the best candidate of each bus. It is kept if successful and decreasing the objective; otherwise the previous solution is restored and the correction stops.
+Each shunt moves at most once.
+
 ## Objective function
 
 The objective function is a weighted sum of penalty terms. Each of the seven weights is configurable by the user (see [Configuration of the run](inputs.md#configuration-of-the-run)), which allows arbitrating between the different terms of the objective (reactive slack activation, active power generation, voltage targeting, reactive power of units and transformer ratio).
@@ -178,7 +183,8 @@ to the nearest tap in the input data (see [Network data](inputs.md#network-data)
 This allows the voltage plan to be readjusted to the new fixed transformation ratios in the second optimization. 
 Without this optimization, note that power flows can vary significantly before and after rounding the taps, particularly for transformers with low impedance.
 
-If at least one shunt has discrete sections, a second ACOPF optimization is also performed after a successful first one, with these shunts rounded to their sections and fixed (see [Discrete shunt sections](#discrete-shunt-sections)).
+If at least one shunt has discrete sections, a second ACOPF optimization is also performed after a successful first one, with these shunts rounded to their sections and fixed,
+followed by at most two optimizations correcting this rounding, kept only if they decrease the objective (see [Discrete shunt sections](#discrete-shunt-sections)).
 When the transformer ratios are also rounded, both apply to the same second optimization.
 
 If the ACOPF resolution(s) are successfully completed, the script `reactiveopfoutput.run` is executed (see [In case of convergence](outputs.md#in-case-of-convergence)). 

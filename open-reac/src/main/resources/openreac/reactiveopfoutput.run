@@ -32,7 +32,7 @@ if final_status == "OK" then {
     1,s,n,
     shunt_var[s,n],
     base100MVA * shunt_var[s,n] * V[n]^2,
-    (if (s,n) in SHUNT_DISCRETE then shunt_sections_rounded[s,n] else 0)
+    (if (s,n) in SHUNT_DISCRETE then shunt_sections[s,n] else 0)
     > (fileOut);
   close (fileOut);
 
@@ -284,10 +284,11 @@ printf "%s %Q\n","slack_bus",slack_bus > (fileOut);
 
 printf{LOG_DEBUG} "\n" > (fileOut);
 printf{LOG_DEBUG} "%s %Q\n","ctime_start",ctime_start > (fileOut);
-printf{LOG_DEBUG} "%s %i\n","last_solve_result_num",solve_result_num > (fileOut);
+printf{LOG_DEBUG} "%s %i\n","last_solve_result_num",acopf_result_num > (fileOut);
 printf{LOG_DEBUG} "%s %i\n","nb_iter_last",nb_iter_last > (fileOut);
 printf{LOG_DEBUG} "%s %i\n","nb_iter_total",nb_iter_total > (fileOut);
 printf{LOG_DEBUG} "%s %f\n","objective_value_first",objective_value_first > (fileOut);
+printf{LOG_DEBUG} "%s %f\n","objective_value_second",objective_value_second > (fileOut);
 printf{LOG_DEBUG} "%s %f\n","objective_value_last",problem_acopf_objective > (fileOut);
 printf{LOG_DEBUG} "%s %f\n","_ampl_elapsed_time",_ampl_elapsed_time > (fileOut);
 printf{LOG_DEBUG} "%s %f\n","_total_solve_time",_total_solve_time > (fileOut);
@@ -365,6 +366,8 @@ printf "%s %i\n","nb_shunt_connectable_or_in_main_SC",card(SHUNTCC) > (fileOut);
 printf "%s %i\n","nb_shunt_with_fixed_value",card(SHUNT_FIX) > (fileOut);
 printf "%s %i\n","nb_shunt_with_variable_value",card(SHUNT_VAR) > (fileOut);
 printf "%s %i\n","nb_shunt_with_discrete_value",card(SHUNT_DISCRETE) > (fileOut);
+printf "%s %i\n","nb_shunt_correction_solvings",nb_shunt_correction_solvings > (fileOut);
+printf "%s %i\n","nb_shunt_corrected",card{(s,n) in SHUNT_DISCRETE: shunt_correction_move[s,n] != 0} > (fileOut);
 printf "%s %i\n","nb_transformers_with_variable_ratio",card(BRANCHCC_REGL_VAR) > (fileOut);
 printf "%s %i\n","nb_transformers_with_fixed_ratio",card(BRANCHCC_REGL_FIX) > (fileOut);
 printf "%s %i\n","nb_parallel_bundles",card(PARALLEL_BUNDLES_ALL) > (fileOut);

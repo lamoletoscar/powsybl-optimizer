@@ -51,7 +51,7 @@ let {(s,n) in SHUNT_DISCRETE} shunt_sections_continuous[s,n] :=
 if card(SHUNT_DISCRETE_BUS diff SHUNT_ROUNDING_BUS) > 0 then
   printf{LOG_WARNING} "Discrete shunts: %i bus(es) with more than %i combinations of sections, rounded to the closest sections\n",
     card(SHUNT_DISCRETE_BUS diff SHUNT_ROUNDING_BUS), shunt_rounding_count_max;
-let {(s,n) in SHUNT_DISCRETE} shunt_var[s,n] := shunt_section_b[s,n] * shunt_sections_rounded[s,n];
+let {(s,n) in SHUNT_DISCRETE} shunt_var[s,n] := shunt_section_b[s,n] * shunt_sections[s,n];
 fix {(s,n) in SHUNT_DISCRETE} shunt_var[s,n];
 
 # solves acopf with the rounded transformer ratios and/or the rounded discrete shunts
@@ -59,3 +59,47 @@ solve problem_acopf_objective;
 
 # add iterations of the second acopf solving
 let nb_iter_total := nb_iter_total + problem_acopf_objective.numiters;
+let objective_value_second := problem_acopf_objective;
+let acopf_result_num := solve_result_num;
+
+# Correction of the discrete shunts (see commons.mod), within shunt_correction_solvings_max solvings. A solving is kept
+# if it succeeds and improves the objective, the estimates being then updated; otherwise the solution retained is
+# restored and the correction ends. Each shunt moves at most once.
+if solve_result_num <= 103 and card(SHUNT_DISCRETE) > 0 then {
+  let shunt_correction_nb_vars := _nvars;
+  repeat while nb_shunt_correction_solvings < shunt_correction_solvings_max {
+    let {(s,n) in SHUNT_DISCRETE, d in {-1, 1}} shunt_correction_slack[s,n,d] :=
+      if n not in BUSCC_SLACK then 0
+      else if shunt_section_b[s,n] * d > 0 then slack1_shunt_B[n]
+      else slack2_shunt_B[n];
+    let SHUNT_CORRECTION_LOT := {(s,n,d) in SHUNT_CORRECTION_MOVES:
+      s == shunt_correction_bus_shunt[n] and d == shunt_correction_bus_move[n]};
+    if card(SHUNT_CORRECTION_LOT) == 0 then break;
+    let shunt_correction_objective_retained := problem_acopf_objective;
+    let {i in 1..shunt_correction_nb_vars} shunt_correction_saved[i] := _var[i];
+    let {(s,n,d) in SHUNT_CORRECTION_LOT} shunt_correction_move[s,n] := d;
+    let {(s,n,d) in SHUNT_CORRECTION_LOT} shunt_var[s,n] := shunt_section_b[s,n] * shunt_sections[s,n];
+    solve problem_acopf_objective;
+    let nb_iter_total := nb_iter_total + problem_acopf_objective.numiters;
+    let nb_shunt_correction_solvings := nb_shunt_correction_solvings + 1;
+    let shunt_correction_retained :=
+      if solve_result_num <= 103 and problem_acopf_objective < shunt_correction_objective_retained then 1 else 0;
+    for {(s,n,d) in SHUNT_CORRECTION_LOT} {
+      printf{LOG_INFO} "Discrete shunts correction %i (%i move(s)): %Q on %Q, move %i, step %+.2f, slack %.2f (estimate %+.2f), objective %+.2f, solve_result_num %i, %s\n",
+        nb_shunt_correction_solvings, card(SHUNT_CORRECTION_LOT), param_shunt_id[s], bus_id[1,n], d,
+        base100MVA * shunt_section_b[s,n] * d, base100MVA * shunt_correction_slack[s,n,d],
+        shunt_correction_estimate[s,n,d], problem_acopf_objective - shunt_correction_objective_retained, solve_result_num,
+        (if shunt_correction_retained == 1 then "kept" else "rejected");
+    }
+    if shunt_correction_retained == 1 then {
+      let acopf_result_num := solve_result_num;
+    } else {
+      # independent variables of the problem only, shunt_var of the discrete shunts included: the defined ones follow,
+      # the unused ones did not change
+      let {i in 1..shunt_correction_nb_vars: _var[i].astatus in {"in", "fix", "pre"}}
+        _var[i] := shunt_correction_saved[i];
+      let {(s,n,d) in SHUNT_CORRECTION_LOT} shunt_correction_move[s,n] := 0;
+      break;
+    }
+  }
+}

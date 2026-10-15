@@ -247,6 +247,41 @@ param shunt_sections_rounded{(s,n) in SHUNT_DISCRETE} integer :=
   else round(shunt_sections_continuous[s,n]);
 
 #
+# Correction of the rounding of the discrete shunts after the second solving (see acopf_2nd.run)
+#
+# A move of one section is estimated by minus the cost of the reactive slack of its bus that it relieves, at the
+# solution retained. A solving tries the best candidate of each bus.
+param shunt_correction_solvings_max := 2;
+param shunt_correction_threshold := 10; # estimated gain to exceed, 1 MVAr of slack with the default penalties
+param shunt_correction_move{SHUNT_DISCRETE} integer default 0; # section switched on (1) or off (-1)
+param shunt_sections{(s,n) in SHUNT_DISCRETE} integer := shunt_sections_rounded[s,n] + shunt_correction_move[s,n];
+param shunt_correction_slack{SHUNT_DISCRETE, {-1, 1}}; # slack of its bus in the direction relieved by the move (pu)
+param shunt_correction_estimate{(s,n) in SHUNT_DISCRETE, d in {-1, 1}} :=
+  - (if shunt_section_b[s,n] * d > 0 then penalty_invest_rea_pos else penalty_invest_rea_neg)
+  * base100MVA * min(abs(shunt_section_b[s,n]), shunt_correction_slack[s,n,d]);
+# Candidates: moves within the range of a shunt not moved yet, of plausible size, and estimated to gain more than
+# shunt_correction_threshold
+set SHUNT_CORRECTION_MOVES := {(s,n) in SHUNT_DISCRETE, d in {-1, 1}:
+  shunt_correction_move[s,n] == 0
+  and shunt_sections_rounded[s,n] + d >= 0 and shunt_sections_rounded[s,n] + d <= shunt_sections_max[s,n]
+  and base100MVA * abs(shunt_section_b[s,n]) < PQmax
+  and shunt_correction_estimate[s,n,d] < -shunt_correction_threshold};
+# Best candidate of each bus (largest estimated gain, then smallest shunt number and move)
+param shunt_correction_bus_estimate{n in SHUNT_DISCRETE_BUS} :=
+  min{(s,n,d) in SHUNT_CORRECTION_MOVES} shunt_correction_estimate[s,n,d];
+param shunt_correction_bus_shunt{n in SHUNT_DISCRETE_BUS} :=
+  min{(s,n,d) in SHUNT_CORRECTION_MOVES: shunt_correction_estimate[s,n,d] <= shunt_correction_bus_estimate[n] + 1e-9} s;
+param shunt_correction_bus_move{n in SHUNT_DISCRETE_BUS} :=
+  min{(s,n,d) in SHUNT_CORRECTION_MOVES: s == shunt_correction_bus_shunt[n]
+    and shunt_correction_estimate[s,n,d] <= shunt_correction_bus_estimate[n] + 1e-9} d;
+set SHUNT_CORRECTION_LOT dimen 3 default {}; # moves of the solving
+param shunt_correction_retained binary default 1; # 1 if the last solving is retained
+param shunt_correction_nb_vars default 0; # _nvars cannot index a declaration
+param shunt_correction_saved{1..shunt_correction_nb_vars}; # solution retained
+param shunt_correction_objective_retained default 0;
+param nb_shunt_correction_solvings default 0;
+
+#
 # Control parameters for reactive power of units
 #
 # If unit_Qc is not consistent, then reactive power will be a variable

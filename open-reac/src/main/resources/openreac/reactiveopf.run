@@ -370,6 +370,8 @@ set messagesInfo default {};
 param nb_iter_last  integer default 0;
 param nb_iter_total integer default 0;
 param objective_value_first default 0; # objective value of the first acopf solving
+param objective_value_second default 0; # objective value of the second acopf solving
+param acopf_result_num integer default -1; # solve_result_num of the acopf solving retained (see acopf_2nd.run)
 
 # Additional dummy parameters, used for local computation
 # Remenber you cannot declare new variable in loop or "if"
