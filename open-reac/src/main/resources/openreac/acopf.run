@@ -107,7 +107,6 @@ if (log_level_knitro <= 1) then {
 # add iterations of the first acopf solving
 let nb_iter_total := nb_iter_total + problem_acopf_objective.numiters;
 let objective_value_first := problem_acopf_objective;
-let acopf_result_num := solve_result_num;
 
 # conduct another optimization if there is at least one transformer tap optimized with the option of rounding them,
 # or at least one discrete shunt
@@ -136,7 +135,7 @@ for {n in BUSCC_SLACK} {
 # <= 103 : feasible
 # 200 convergence to unfeasible
 # > 200 : failure
-if acopf_result_num == 200
+if solve_result_num == 200
 then {
   let output_results := 0;
   let messageInfo := "Acopf optimization was ***not*** successfull - Convergence to an infeasible solution";
@@ -144,7 +143,7 @@ then {
   let messagesInfo := messagesInfo union {messageInfo};
   let final_status := "NOK";
 }
-else if acopf_result_num > 103
+else if solve_result_num > 103
 then {
   let output_results := 0;
   let messageInfo := "Acopf optimization was ***not*** successfull - no solution found";
