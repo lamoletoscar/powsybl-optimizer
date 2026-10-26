@@ -215,7 +215,6 @@ set SHUNT_FIX := setof {(1,s,n) in SHUNT: s not in PARAM_SHUNT and n in BUSCC} (
 # Branch-and-bound of the discrete shunts (see acopf_2nd.run), reference of their discretization
 #
 param shunt_minlp_maxtime := 3600; # limit of the branch-and-bound (s, elapsed time)
-param shunt_minlp_solve_result_num integer default -1;
 param shunt_sections{SHUNT_DISCRETE} integer; # sections in the branch-and-bound solution
 
 #

@@ -60,7 +60,4 @@ solve problem_acopf_objective;
 # add iterations of the second acopf solving
 let nb_iter_total := nb_iter_total + problem_acopf_objective.numiters;
 let objective_value_second := problem_acopf_objective;
-if card(SHUNT_DISCRETE) > 0 then {
-  let shunt_minlp_solve_result_num := solve_result_num;
-  let {(s,n) in SHUNT_DISCRETE} shunt_sections[s,n] := round(shunt_sections_var[s,n]);
-}
+let {(s,n) in SHUNT_DISCRETE} shunt_sections[s,n] := round(shunt_sections_var[s,n]);
