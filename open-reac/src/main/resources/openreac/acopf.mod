@@ -90,6 +90,12 @@ var shunt_var{(shunt,n) in SHUNT_VAR}
   >= min{(1,shunt,k) in SHUNT} shunt_valmin[1,shunt,k],
   <= max{(1,shunt,k) in SHUNT} shunt_valmax[1,shunt,k];
 
+# Sections of the discrete shunts as integers, used only in the solving where they are discrete
+set PROBLEM_SHUNT_MINLP default { };
+var shunt_sections_var{(s,n) in SHUNT_DISCRETE} integer >= 0, <= shunt_sections_max[s,n];
+subject to ctr_shunt_sections{PROBLEM_SHUNT_MINLP, (s,n) in SHUNT_DISCRETE}:
+  shunt_var[s,n] = shunt_section_b[s,n] * shunt_sections_var[s,n];
+
 
 #
 # SVC reactive generation
