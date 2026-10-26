@@ -90,6 +90,14 @@ var shunt_var{(shunt,n) in SHUNT_VAR}
   >= min{(1,shunt,k) in SHUNT} shunt_valmin[1,shunt,k],
   <= max{(1,shunt,k) in SHUNT} shunt_valmax[1,shunt,k];
 
+# Sections of the discrete shunts as binaries (unary encoding), used only in the solving where they are discrete
+set PROBLEM_SHUNT_MPEC default { };
+var shunt_section_on{(s,n) in SHUNT_DISCRETE, k in 1..shunt_sections_max[s,n]} binary;
+subject to ctr_shunt_sections{PROBLEM_SHUNT_MPEC, (s,n) in SHUNT_DISCRETE}:
+  shunt_var[s,n] = shunt_section_b[s,n] * sum{k in 1..shunt_sections_max[s,n]} shunt_section_on[s,n,k];
+subject to ctr_shunt_sections_order{PROBLEM_SHUNT_MPEC, (s,n) in SHUNT_DISCRETE, k in 2..shunt_sections_max[s,n]}:
+  shunt_section_on[s,n,k] <= shunt_section_on[s,n,k-1];
+
 
 #
 # SVC reactive generation
