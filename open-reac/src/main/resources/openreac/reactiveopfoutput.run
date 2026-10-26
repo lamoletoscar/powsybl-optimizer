@@ -367,8 +367,8 @@ printf "%s %i\n","nb_shunt_with_fixed_value",card(SHUNT_FIX) > (fileOut);
 printf "%s %i\n","nb_shunt_with_variable_value",card(SHUNT_VAR) > (fileOut);
 printf "%s %i\n","nb_shunt_with_discrete_value",card(SHUNT_DISCRETE) > (fileOut);
 if final_status == "OK" and card(SHUNT_DISCRETE) > 0 then
-  printf "%s %f\n","max_shunt_section_gap", max({(s,n) in SHUNT_DISCRETE}
-    abs(sum{k in 1..shunt_sections_max[s,n]} shunt_section_on[s,n,k] - shunt_sections[s,n])) > (fileOut);
+  printf "%s %e\n","max_discrete_shunt_fractionality", max({(s,n) in SHUNT_DISCRETE, k in 1..shunt_sections_max[s,n]}
+    abs(shunt_section_on[s,n,k] - round(shunt_section_on[s,n,k]))) > (fileOut);
 printf "%s %i\n","nb_transformers_with_variable_ratio",card(BRANCHCC_REGL_VAR) > (fileOut);
 printf "%s %i\n","nb_transformers_with_fixed_ratio",card(BRANCHCC_REGL_FIX) > (fileOut);
 printf "%s %i\n","nb_parallel_bundles",card(PARALLEL_BUNDLES_ALL) > (fileOut);
