@@ -24,7 +24,6 @@ Please note that:
 - The transformation ratios $\boldsymbol{\rho_{ij}}$ and the shunt susceptances $\boldsymbol{b_{i,s}}$ are continuous in the optimization. 
 At the end, these variables may differ from the values associated with the discrete taps of the equipment (see [Network data](inputs.md#network-data)), and rounding may be necessary. 
 In the case of transformers, a second optimization can be carried out to adjust the voltage plan to the new transformation ratios after rounding (see [Solving](acOptimalPowerflow.md#solving)).
-In the case of shunts, their sections can be rounded before a second optimization (see [Discrete shunt sections](#discrete-shunt-sections)).
 - Transformers connected in parallel are grouped and constrained to a common transformation ratio (see [Parallel transformers](#parallel-transformers)). 
 - Shunts that are disconnected at the beginning of the optimization but are specified as variable (see [Configuration of the run](inputs.md#configuration-of-the-run)) can be reconnected and optimized.
 - Only batteries that regulate voltage (as flagged in `ampl_network_batteries.txt`) have a variable reactive power; the reactive power of other batteries is fixed at its input value. 
@@ -122,22 +121,6 @@ This grouping interacts with the second optimization after tap rounding (see [So
 
 Finally, if at solve time a member of a bundle carries no reactive loop flow at all — one of its sides is opened, or it lies outside the main synchronous component — the whole bundle is relaxed: its members are optimized independently for that run, and the event is logged. A member that is in service but that the model cannot move (near-zero impedance, single-ratio tap table) behaves instead like a non-optimized member above: its frozen effective ratio pins the bundle.
 
-## Discrete shunt sections
-
-When the Java parameter `discreteShuntCompensators` is enabled (see [OpenReacParameters](https://github.com/powsybl/powsybl-optimizer/blob/main/open-reac/src/main/java/com/powsybl/openreac/parameters/input/OpenReacParameters.java)),
-the variable shunts with a linear model are rounded to one of their sections after the first solving, and fixed to it in a second solving (see [Solving](#solving)).
-The variable shunts with a non linear model are rounded afterward (see [Shunt compensator discretization](results.md#shunt-compensator-discretization)); they are listed in the `ReportNode` of the run.
-
-For such a shunt $s$ of bus $i$, with $N_s$ sections of susceptance $b_s$ (derived from `ampl_network_shunts.txt`), the continuous susceptance $b_{i,s}^*$ of the first solving gives $n_s^* = \min(N_s, \max(0, b_{i,s}^* / b_s))$ sections.
-The discrete shunts of a bus are rounded together: among all the combinations of their numbers of sections, the one retained minimizes the deviation of the susceptance of the bus from its continuous value $\sum_s b_s n_s^*$,
-and, in case of equality, the sum over its shunts of the deviations of their numbers of sections from $n_s^*$.
-These combinations are enumerated; a bus with more than $10000$ of them gets the closest sections instead.
-
-If the second solving is successful, this rounding is then corrected by moves of one section, within at most $2$ more solvings.
-A move is estimated by the cost of the reactive slack of its bus that it relieves (see [Constraints](#constraints)), and is a candidate if this estimate is above $10$.
-A solving tries the best candidate of each bus. It is kept if successful and decreasing the objective; otherwise the previous solution is restored and the correction stops.
-Each shunt moves at most once.
-
 ## Objective function
 
 The objective function is a weighted sum of penalty terms. Each of the seven weights is configurable by the user (see [Configuration of the run](inputs.md#configuration-of-the-run)), which allows arbitrating between the different terms of the objective (reactive slack activation, active power generation, voltage targeting, reactive power of units and transformer ratio).
@@ -182,10 +165,6 @@ a second ACOPF optimization can be performed after rounding the transformer rati
 to the nearest tap in the input data (see [Network data](inputs.md#network-data)). 
 This allows the voltage plan to be readjusted to the new fixed transformation ratios in the second optimization. 
 Without this optimization, note that power flows can vary significantly before and after rounding the taps, particularly for transformers with low impedance.
-
-If at least one shunt has discrete sections, a second ACOPF optimization is also performed after a successful first one, with these shunts rounded to their sections and fixed,
-followed by at most two optimizations correcting this rounding, kept only if they decrease the objective (see [Discrete shunt sections](#discrete-shunt-sections)).
-When the transformer ratios are also rounded, both apply to the same second optimization.
 
 If the ACOPF resolution(s) are successfully completed, the script `reactiveopfoutput.run` is executed (see [In case of convergence](outputs.md#in-case-of-convergence)). 
 Otherwise, the script `reactiveopfexit.run` is executed (see [In case of inconsistency](outputs.md#in-case-of-inconsistency)).
