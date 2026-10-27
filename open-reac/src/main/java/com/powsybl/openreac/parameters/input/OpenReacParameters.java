@@ -601,10 +601,9 @@ public class OpenReacParameters {
     }
 
     /**
-     * @return the boolean indicating if the sections of the variable shunt compensators are rounded by the optimizer,
-     *         from the continuous solution of a first ACOPF solving, then fixed in a second one (default false).
-     *         Only the shunt compensators with a linear model are concerned: the others are rounded to their closest
-     *         section afterward.
+     * @return the boolean indicating if the sections of the variable shunt compensators are decided by the optimizer
+     *         (default false). Only the shunt compensators with a linear model are concerned: the others are rounded to
+     *         their closest section afterward.
      */
     public boolean isDiscreteShuntCompensators() {
         return discreteShuntCompensators;
