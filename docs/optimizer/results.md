@@ -12,7 +12,6 @@ The susceptances of the variable shunts are continuous in the optimization (see 
 whereas a shunt compensator of the network can only be set on one of its sections.
 For each shunt of `reactiveopf_results_shunts.csv`, the continuous susceptance $b$ (in S, converted from the per-unit value on the $S_b = 100$ MVA base)
 is therefore rounded onto the section of the shunt whose susceptance $b_{section}$ is the closest to $b$, and the resulting `ShuntCompensatorModification` sets this section.
-For the shunts rounded by the optimization (see [Discrete shunt sections](acOptimalPowerflow.md#discrete-shunt-sections)), the section it retained is set instead: $b$ is the susceptance of this section and the deviation below is $0$.
 
 The following results quantify this rounding:
 
